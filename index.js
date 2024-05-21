@@ -7,7 +7,6 @@ const app = express();
 app.use(express.json())
 
 const saltRounds = 10;
-const secretKey = 'randomSecret';
 const users = [];
 
 const privateKey = fs.readFileSync(path.join(__dirname, 'keys', 'rsa.key'), 'utf8')
