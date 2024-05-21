@@ -1,12 +1,18 @@
 const express = require('express')
 const jwt = require("jsonwebtoken")
 const bcrypt = require("bcrypt")
+const fs = require('fs')
+const path = require('path')
 const app = express();
 app.use(express.json())
 
 const saltRounds = 10;
 const secretKey = 'randomSecret';
 const users = [];
+
+const privateKey = fs.readFileSync(path.join(__dirname, 'keys', 'rsa.key'), 'utf8')
+const publicKey = fs.readFileSync(path.join(__dirname, 'keys', 'rsa.key.pub'), 'utf8')
+
 
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
@@ -19,14 +25,13 @@ app.post('/login', (req, res) => {
         if(err)
             return res.status(500).json({ message: 'Something went wrong. Please try again!' })
         if(result){
-            const token = jwt.sign({ username: user.username }, secretKey, { expiresIn: '1h' });
+            const token = jwt.sign({ username: user.username }, privateKey, { algorithm:'RS256',expiresIn: '1h'});
             res.json({ token });
         }else{
             res.status(401).json({ message: 'Invalid Password' })
         }
     });
 
-    // Generate JWT token
 });
 
 function authenticateToken(req, res, next) {
@@ -37,8 +42,9 @@ function authenticateToken(req, res, next) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
   
-    jwt.verify(token, secretKey, (err, user) => {
+    jwt.verify(token, publicKey, {algorithms:['RS256']}, (err, user) => {
       if (err) {
+        console.log(err)
         return res.status(403).json({ message: 'Invalid token' });
       }
       const userInfo = users.find(usr=>usr.username===user.username)
@@ -49,6 +55,7 @@ function authenticateToken(req, res, next) {
       }
       next();
     });
+    
 }  
 
 app.get('/protected', authenticateToken, (req, res) => {
